@@ -18,6 +18,15 @@ ActiveRecord::Schema.define do
     t.references :post
     t.timestamp null: false
   end
+  create_table :blogs, force: true do |t|
+    t.string :name
+    t.timestamps null: false
+  end
+  create_table :authors_blogs, id: false, force: true do |t|
+    t.references :author
+    t.references :blog
+    t.timestamp null: false
+  end
 end
 
 module ARModels
@@ -33,6 +42,12 @@ module ARModels
 
   class Author < ActiveRecord::Base
     has_many :posts
+    has_many :comments
+    has_and_belongs_to_many :blogs
+  end
+
+  class Blog < ActiveRecord::Base
+    has_and_belongs_to_many :authors
   end
 
   class PostSerializer < ActiveModel::Serializer
