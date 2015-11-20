@@ -86,8 +86,9 @@ module ActiveModel
           cached     = "#{to_valid_const_name(name)}CachedSerializer"
           non_cached = "#{to_valid_const_name(name)}NonCachedSerializer"
 
+          Object.send(:remove_const, non_cached) if Object.const_defined?(non_cached)
+          Object.const_set non_cached, Class.new(ActiveModel::Serializer)
           Object.const_set cached, Class.new(ActiveModel::Serializer) unless Object.const_defined?(cached)
-          Object.const_set non_cached, Class.new(ActiveModel::Serializer) unless Object.const_defined?(non_cached)
 
           klass._cache_options ||= {}
           klass._cache_options[:key] = klass._cache_key if klass._cache_key
