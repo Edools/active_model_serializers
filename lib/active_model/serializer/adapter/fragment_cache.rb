@@ -18,7 +18,7 @@ module ActiveModel
         def fetch
           klass = serializer.class
           # It will split the serializer into two, one that will be cached and one that will not
-          serializers = fragment_serializer(serializer.object.class.name, klass)
+          serializers = fragment_serializer(serializer.class.name, klass)
 
           # Instantiate both serializers
           cached_serializer     = serializers[:cached].constantize.new(serializer.object)
