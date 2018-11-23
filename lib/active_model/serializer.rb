@@ -7,6 +7,7 @@ require 'active_model/serializer/errors_serializer'
 require 'active_model/serializer/concerns/caching'
 require 'active_model/serializer/fieldset'
 require 'active_model/serializer/lint'
+require 'active_model/serializer/tags'
 
 # ActiveModel::Serializer is an abstract class that is
 # reified when subclassed to decorate a resource.
@@ -31,6 +32,7 @@ module ActiveModel
     end
     include ActiveSupport::Configurable
     include Caching
+    include Tags
 
     # @param resource [ActiveRecord::Base, ActiveModelSerializers::Model]
     # @return [ActiveModel::Serializer]

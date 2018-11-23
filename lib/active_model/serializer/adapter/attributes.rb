@@ -5,6 +5,7 @@ module ActiveModel
         def initialize(serializer, options = {})
           super(ActiveModelSerializers::Adapter::Attributes.new(serializer, options))
         end
+
         class << self
           extend ActiveModelSerializers::Deprecate
           deprecate :new, 'ActiveModelSerializers::Adapter::Json.'
