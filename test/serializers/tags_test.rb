@@ -2,8 +2,8 @@ require 'test_helper'
 
 module ActiveModel
   class Serializer
-    class TagsTest < Minitest::Test
-      class CommentTestSerializer < Serializer
+    class TagsTest < ActiveSupport::TestCase
+      class CommentTestSerializer < ActiveModel::Serializer
         attributes :id
         belongs_to :post, tag_method: -> { "post_#{object.post.id}" }
 
@@ -12,15 +12,15 @@ module ActiveModel
         end
       end
 
-      class AuthorTestSerializer < Serializer
+      class AuthorTestSerializer < ActiveModel::Serializer
         has_many :blog_ids
       end
 
-      class AuthorWithMethTagTestSerializer < Serializer
+      class AuthorWithMethTagTestSerializer < ActiveModel::Serializer
         has_many :blog_ids, tag_method: ->(virtual) { virtual.map{ |id| "foo_#{id}" } }
       end
 
-      class PostTestSerializer < Serializer
+      class PostTestSerializer < ActiveModel::Serializer
         has_many :comments, serializer: CommentTestSerializer
         belongs_to :author, serializer: AuthorTestSerializer
       end
@@ -30,11 +30,12 @@ module ActiveModel
       end
 
       def setup
-        @author = ARModels::Author.create(name: 'Homer S.')
-        @post = Post.new(id: 2, title: 'New Post', author: @author, comments: [@post])
+        @author  = ARModels::Author.create!(name: 'Homer S.')
+        @post    = Post.new(id: 2, title: 'New Post', author: @author)
         @comment = Comment.new(id: 3, body: 'A COMMENT', post: @post)
-        @blog = ARModels::Blog.create(name: 'awesome_blog')
+        @blog    = ARModels::Blog.create!(name: 'awesome_blog')
 
+        @post.comments = [@comment]
         @author.blogs << @blog
       end
 
@@ -42,9 +43,9 @@ module ActiveModel
         @serializer = PostTestSerializer.new(@post)
 
         expected_tags = []
-        expected_tags << add_test_prefix("author_test_serializer/blog/#{@blog.id}")
-        expected_tags << add_test_prefix("author_test_serializer/ar_models/author/#{@author.id}")
-        expected_tags << add_test_prefix("post_test_serializer/post/2")
+        expected_tags << add_test_prefix("post_test_serializer/comment/#{@comment.id}")
+        expected_tags << add_test_prefix("post_test_serializer/ar_models/author/#{@author.id}")
+        expected_tags << add_test_prefix("post_test_serializer/post/#{@post.id}")
 
         assert_equal(expected_tags, @serializer._tags)
       end
@@ -63,8 +64,8 @@ module ActiveModel
         serializer = CommentTestSerializer.new(@comment)
 
         expected_tags = []
-        expected_tags << 'post_2'
-        expected_tags << add_test_prefix('comment_test_serializer/comment/3')
+        expected_tags << "post_#{@post.id}"
+        expected_tags << add_test_prefix("comment_test_serializer/comment/#{@comment.id}")
 
         assert_equal(expected_tags, serializer._tags)
       end

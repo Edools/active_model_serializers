@@ -2,6 +2,7 @@ module ActiveModel
   class Serializer
     module Tags
       extend ActiveSupport::Concern
+
       def _tags
         if object.present?
           associations_tags.push(object_tag).flatten.compact.uniq
@@ -16,34 +17,26 @@ module ActiveModel
 
       def associations_tags
         associations.map do |association|
-          serializer = association.serializer
+          tag_name =
+            if association.reflection.is_a?(HasManyReflection)
+              object = association.object.first
+              object.is_a?(Integer) ? association.key.to_s.gsub(/(_ids|_id)$/, '') : object.class.to_s
+            else
+              association.object.class.to_s
+            end
 
-          if serializer.respond_to?(:each)
-            serializer.map { |s| s._tags }
-          elsif association.options[:virtual_value]
-            tags_for_virtual_value_from(association)
-          else
-            serializer._tags
-          end
+          build_tags_from(association.object, tag_name, association.reflection.options[:tag_method])
         end
       end
 
-      def tags_for_virtual_value_from(association)
-        name = association.name.to_s
-        virtual_value = association.options[:virtual_value]
+      def build_tags_from(object, tag_name, tag_method)
+        return tag_method.arity > 0 ? instance_exec(object, &tag_method) : instance_exec(&tag_method) if tag_method
+        [object].flatten.map { |obj| build_object_tag(obj, tag_name) }
+      end
 
-        if association.options[:tag_method]
-          meth = association.options[:tag_method]
-          meth.arity > 0 ? instance_exec(virtual_value, &meth) : instance_exec(&meth)
-        elsif name.end_with?('_ids', 'id')
-          tag_name = name.gsub(/(_ids|_id)$/, '')
-
-          virtual_value.map do |id|
-            [self.class.name.underscore, tag_name, id].join('/')
-          end
-        else
-          raise "You need to provide the `tag_method` option for `#{name}` association"
-        end
+      def build_object_tag(obj, tag_name)
+        id = obj.try(:id) || obj
+        [self.class.name.underscore, tag_name.underscore, id].join('/')
       end
     end
   end
