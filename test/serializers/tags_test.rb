@@ -3,7 +3,7 @@ require 'test_helper'
 module ActiveModel
   class Serializer
     class TagsTest < ActiveSupport::TestCase
-      class CommentTestSerializer < ActiveModel::Serializer
+      class CommentSerializer < ActiveModel::Serializer
         attributes :id
         belongs_to :post, tag_method: -> { "post_#{object.post.id}" }
 
@@ -12,17 +12,21 @@ module ActiveModel
         end
       end
 
-      class AuthorTestSerializer < ActiveModel::Serializer
+      class AuthorSerializer1 < ActiveModel::Serializer
         has_many :blog_ids
       end
 
-      class AuthorWithMethTagTestSerializer < ActiveModel::Serializer
+      class AuthorSerializer2 < ActiveModel::Serializer
+        has_many :blogs
+      end
+
+      class AuthorSerializerWithTagMethod < ActiveModel::Serializer
         has_many :blog_ids, tag_method: ->(virtual) { virtual.map{ |id| "foo_#{id}" } }
       end
 
-      class PostTestSerializer < ActiveModel::Serializer
-        has_many :comments, serializer: CommentTestSerializer
-        belongs_to :author, serializer: AuthorTestSerializer
+      class PostSerializer < ActiveModel::Serializer
+        has_many :comments, serializer: CommentSerializer
+        belongs_to :author, serializer: AuthorSerializer1
       end
 
       def add_test_prefix(tag)
@@ -39,45 +43,51 @@ module ActiveModel
         @author.blogs << @blog
       end
 
-      def test_tags
-        @serializer = PostTestSerializer.new(@post)
+      def test_tags_with_has_many
+        serializer_1 = AuthorSerializer1.new(@author)
+        serializer_2 = AuthorSerializer2.new(@author)
+        expected_tags_1 = [
+          add_test_prefix("author_serializer1/ar_models/author/#{@author.id}"),
+          add_test_prefix("author_serializer1/blog/#{@blog.id}")
+        ]
+        expected_tags_2 = [
+          add_test_prefix("author_serializer2/ar_models/author/#{@author.id}"),
+          add_test_prefix("author_serializer2/ar_models/blog/#{@blog.id}")
+        ]
 
-        expected_tags = []
-        expected_tags << add_test_prefix("post_test_serializer/comment/#{@comment.id}")
-        expected_tags << add_test_prefix("post_test_serializer/ar_models/author/#{@author.id}")
-        expected_tags << add_test_prefix("post_test_serializer/post/#{@post.id}")
-
-        assert_equal(expected_tags, @serializer._tags)
+        assert_match_array(expected_tags_1, serializer_1._tags)
+        assert_match_array(expected_tags_2, serializer_2._tags)
       end
 
-      def test_tag_with_virtual_attribute
-        serializer = AuthorTestSerializer.new(@author)
+      def test_tags_with_belongs_to_and_has_many
+        serializer = PostSerializer.new(@post)
+        expected_tags = [
+          add_test_prefix("post_serializer/post/#{@post.id}"),
+          add_test_prefix("post_serializer/comment/#{@comment.id}"),
+          add_test_prefix("post_serializer/ar_models/author/#{@author.id}")
+        ]
 
-        expected_tags = []
-        expected_tags << add_test_prefix("author_test_serializer/blog/#{@blog.id}")
-        expected_tags << add_test_prefix("author_test_serializer/ar_models/author/#{@author.id}")
-
-        assert_equal(expected_tags, serializer._tags)
+        assert_match_array(expected_tags, serializer._tags)
       end
 
-      def test_tag_with_virtual_attribute_and_tag_method
-        serializer = CommentTestSerializer.new(@comment)
+      def test_tags_with_belongs_to_and_tag_method
+        serializer = CommentSerializer.new(@comment)
+        expected_tags = [
+          "post_#{@post.id}",
+          add_test_prefix("comment_serializer/comment/#{@comment.id}")
+        ]
 
-        expected_tags = []
-        expected_tags << "post_#{@post.id}"
-        expected_tags << add_test_prefix("comment_test_serializer/comment/#{@comment.id}")
-
-        assert_equal(expected_tags, serializer._tags)
+        assert_match_array(expected_tags, serializer._tags)
       end
 
-      def test_tag_using_virtual_attribute_with_tag_method
-        serializer = AuthorWithMethTagTestSerializer.new(@author)
+      def test_tags_with_has_many_and_tag_method
+        serializer = AuthorSerializerWithTagMethod.new(@author)
+        expected_tags = [
+          "foo_#{@blog.id}",
+          add_test_prefix("author_serializer_with_tag_method/ar_models/author/#{@author.id}")
+        ]
 
-        expected_tags = []
-        expected_tags << "foo_#{@blog.id}"
-        expected_tags << add_test_prefix("author_with_meth_tag_test_serializer/ar_models/author/#{@author.id}")
-
-        assert_equal(expected_tags, serializer._tags)
+        assert_match_array(expected_tags, serializer._tags)
       end
     end
   end

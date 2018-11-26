@@ -60,6 +60,8 @@ require 'support/serialization_testing'
 
 require 'support/rails5_shims'
 
+require 'support/match_array'
+
 require 'fixtures/active_record'
 
 require 'fixtures/poro'
