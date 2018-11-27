@@ -21,12 +21,22 @@ module ActiveModel
       end
 
       class AuthorSerializerWithTagMethod < ActiveModel::Serializer
-        has_many :blog_ids, tag_method: ->(virtual) { virtual.map{ |id| "foo_#{id}" } }
+        has_many :blog_ids, tag_method: ->(ids) { ids.map{ |id| "foo_#{id}" } }
       end
 
-      class PostSerializer < ActiveModel::Serializer
+      class PostSerializer1 < ActiveModel::Serializer
         has_many :comments, serializer: CommentSerializer
         belongs_to :author, serializer: AuthorSerializer1
+      end
+
+      class PostSerializer2 < ActiveModel::Serializer
+        belongs_to :author_id
+        has_many :comment_ids
+      end
+
+      class PostSerializer3 < ActiveModel::Serializer
+        has_many :comment_ids, tag_method: ->(ids) { ids.map{ |id| "bar_#{id}" } }
+        belongs_to :author_id, tag_method: ->(id) { "foo_#{id}" }
       end
 
       def add_test_prefix(tag)
@@ -34,12 +44,14 @@ module ActiveModel
       end
 
       def setup
-        @author  = ARModels::Author.create!(name: 'Homer S.')
-        @post    = Post.new(id: 2, title: 'New Post', author: @author)
-        @comment = Comment.new(id: 3, body: 'A COMMENT', post: @post)
-        @blog    = ARModels::Blog.create!(name: 'awesome_blog')
+        @author       = ARModels::Author.create!(name: 'Homer S.')
+        @post_fake    = Post.new(id: 2, title: 'New Post 1', author: @author)
+        @comment_fake = Comment.new(id: 3, body: 'A COMMENT', post: @post_fake)
+        @post_db      = ARModels::Post.create!(title: 'New Post 2', author: @author)
+        @comment_db   = ARModels::Comment.create!(contents: 'A COMMENT', post: @post_db)
+        @blog         = ARModels::Blog.create!(name: 'awesome_blog')
 
-        @post.comments = [@comment]
+        @post_fake.comments = [@comment_fake]
         @author.blogs << @blog
       end
 
@@ -52,29 +64,18 @@ module ActiveModel
         ]
         expected_tags_2 = [
           add_test_prefix("author_serializer2/ar_models/author/#{@author.id}"),
-          add_test_prefix("author_serializer2/ar_models/blog/#{@blog.id}")
+          add_test_prefix("author_serializer2/blog/#{@blog.id}")
         ]
 
         assert_match_array(expected_tags_1, serializer_1._tags)
         assert_match_array(expected_tags_2, serializer_2._tags)
       end
 
-      def test_tags_with_belongs_to_and_has_many
-        serializer = PostSerializer.new(@post)
-        expected_tags = [
-          add_test_prefix("post_serializer/post/#{@post.id}"),
-          add_test_prefix("post_serializer/comment/#{@comment.id}"),
-          add_test_prefix("post_serializer/ar_models/author/#{@author.id}")
-        ]
-
-        assert_match_array(expected_tags, serializer._tags)
-      end
-
       def test_tags_with_belongs_to_and_tag_method
-        serializer = CommentSerializer.new(@comment)
+        serializer = CommentSerializer.new(@comment_fake)
         expected_tags = [
-          "post_#{@post.id}",
-          add_test_prefix("comment_serializer/comment/#{@comment.id}")
+          "post_#{@post_fake.id}",
+          add_test_prefix("comment_serializer/comment/#{@comment_fake.id}")
         ]
 
         assert_match_array(expected_tags, serializer._tags)
@@ -88,6 +89,38 @@ module ActiveModel
         ]
 
         assert_match_array(expected_tags, serializer._tags)
+      end
+
+      def test_tags
+        serializer_1 = PostSerializer1.new(@post_fake)
+        serializer_2 = PostSerializer1.new(@post_db)
+        serializer_3 = PostSerializer2.new(@post_db)
+        serializer_4 = PostSerializer3.new(@post_db)
+        expected_tags_1 = [
+          add_test_prefix("post_serializer1/post/#{@post_fake.id}"),
+          add_test_prefix("post_serializer1/author/#{@author.id}"),
+          add_test_prefix("post_serializer1/comment/#{@comment_fake.id}")
+        ]
+        expected_tags_2 = [
+          add_test_prefix("post_serializer1/ar_models/post/#{@post_db.id}"),
+          add_test_prefix("post_serializer1/author/#{@author.id}"),
+          add_test_prefix("post_serializer1/comment/#{@comment_db.id}")
+        ]
+        expected_tags_3 = [
+          add_test_prefix("post_serializer2/ar_models/post/#{@post_db.id}"),
+          add_test_prefix("post_serializer2/author/#{@author.id}"),
+          add_test_prefix("post_serializer2/comment/#{@comment_db.id}")
+        ]
+        expected_tags_4 = [
+          add_test_prefix("post_serializer3/ar_models/post/#{@post_db.id}"),
+          "foo_#{@author.id}",
+          "bar_#{@comment_db.id}"
+        ]
+
+        assert_match_array(expected_tags_1, serializer_1._tags)
+        assert_match_array(expected_tags_2, serializer_2._tags)
+        assert_match_array(expected_tags_3, serializer_3._tags)
+        assert_match_array(expected_tags_4, serializer_4._tags)
       end
     end
   end

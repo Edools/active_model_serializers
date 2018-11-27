@@ -17,14 +17,7 @@ module ActiveModel
 
       def associations_tags
         associations.map do |association|
-          tag_name =
-            if association.reflection.is_a?(HasManyReflection)
-              object = association.object.first
-              object.is_a?(Integer) ? association.key.to_s.gsub(/(_ids|_id)$/, '') : object.class.to_s
-            else
-              association.object.class.to_s
-            end
-
+          tag_name = association.key.to_s.singularize.gsub(/(_id)$/, '')
           build_tags_from(association.object, tag_name, association.reflection.options[:tag_method])
         end
       end
