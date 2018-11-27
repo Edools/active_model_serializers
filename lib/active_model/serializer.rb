@@ -406,7 +406,15 @@ module ActiveModel
       include_directive = options.fetch(:include_directive)
       include_slice = options[:include_slice]
       associations(include_directive, include_slice).each_with_object({}) do |association, relationships|
-        adapter_opts = adapter_options.merge(include_directive: include_directive[association.key], adapter_instance: adapter_instance)
+        association_include = association.reflection.options.delete(:include)
+        association_include_directive =
+          if association_include
+            ActiveModel::Serializer.include_directive_from_options(include: association_include)
+          else
+            include_directive[association.key]
+          end
+
+        adapter_opts = adapter_options.merge(include_directive: association_include_directive, adapter_instance: adapter_instance)
         relationships[association.key] = association.serializable_hash(adapter_opts, adapter_instance)
       end
     end
