@@ -406,7 +406,7 @@ module ActiveModel
       include_directive = options.fetch(:include_directive)
       include_slice = options[:include_slice]
       associations(include_directive, include_slice).each_with_object({}) do |association, relationships|
-        association_include = association.reflection.options.delete(:include)
+        association_include = association.reflection.options[:include]
         association_include_directive =
           if association_include
             ActiveModel::Serializer.include_directive_from_options(include: association_include)

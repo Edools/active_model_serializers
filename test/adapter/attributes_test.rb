@@ -102,6 +102,7 @@ module ActiveModelSerializers
           assert_equal(post_hash_1, serializable_hash_for(@serializer1))
           assert_equal(post_hash_1, serializable_hash_for(@serializer3))
           assert_equal(post_hash_2, serializable_hash_for(@serializer2))
+          assert_equal(post_hash_2, serializable_hash_for(@serializer2))
         end
 
         def test_overwriting_association_include
