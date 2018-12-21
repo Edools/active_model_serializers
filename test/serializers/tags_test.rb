@@ -39,6 +39,21 @@ module ActiveModel
         belongs_to :author_id, tag_method: ->(id) { "foo_#{id}" }
       end
 
+      module PostScope
+        class CommentSerializer < ActiveModel::Serializer
+          attributes :id
+        end
+
+        class AuthorSerializer < ActiveModel::Serializer
+          attributes :id
+        end
+      end
+
+      class PostSerializer4 < ActiveModel::Serializer
+        has_many :comments, serializer: PostScope::CommentSerializer
+        belongs_to :author, serializer: PostScope::AuthorSerializer
+      end
+
       def add_test_prefix(tag)
         'active_model/serializer/tags_test/' + tag
       end
@@ -96,15 +111,16 @@ module ActiveModel
         serializer_2 = PostSerializer1.new(@post_db)
         serializer_3 = PostSerializer2.new(@post_db)
         serializer_4 = PostSerializer3.new(@post_db)
+        serializer_5 = PostSerializer4.new(@post_db)
         expected_tags_1 = [
           add_test_prefix("post_serializer1/post/#{@post_fake.id}"),
-          add_test_prefix("post_serializer1/author/#{@author.id}"),
-          add_test_prefix("post_serializer1/comment/#{@comment_fake.id}")
+          add_test_prefix("author_serializer1/author/#{@author.id}"),
+          add_test_prefix("comment_serializer/comment/#{@comment_fake.id}")
         ]
         expected_tags_2 = [
           add_test_prefix("post_serializer1/ar_models/post/#{@post_db.id}"),
-          add_test_prefix("post_serializer1/author/#{@author.id}"),
-          add_test_prefix("post_serializer1/comment/#{@comment_db.id}")
+          add_test_prefix("author_serializer1/author/#{@author.id}"),
+          add_test_prefix("comment_serializer/comment/#{@comment_db.id}")
         ]
         expected_tags_3 = [
           add_test_prefix("post_serializer2/ar_models/post/#{@post_db.id}"),
@@ -116,11 +132,18 @@ module ActiveModel
           "foo_#{@author.id}",
           "bar_#{@comment_db.id}"
         ]
+        expected_tags_5 = [
+          add_test_prefix("post_serializer4/ar_models/post/#{@post_db.id}"),
+          add_test_prefix("post_scope/author_serializer/author/#{@author.id}"),
+          add_test_prefix("post_scope/comment_serializer/comment/#{@comment_db.id}")
+        ]
 
+        ENV['foo'] = 't'
         assert_match_array(expected_tags_1, serializer_1._tags)
         assert_match_array(expected_tags_2, serializer_2._tags)
         assert_match_array(expected_tags_3, serializer_3._tags)
         assert_match_array(expected_tags_4, serializer_4._tags)
+        assert_match_array(expected_tags_5, serializer_5._tags)
       end
     end
   end
