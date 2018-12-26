@@ -31,7 +31,6 @@ module ActiveModel
 
       def build_object_tag(obj, tag_name, custom_serializer)
         id = obj.try(:id) || obj
-        # binding.pry if ENV['foo']
 
         serializer = custom_serializer || self.class
         [serializer.name.underscore, tag_name.underscore, id].join('/')

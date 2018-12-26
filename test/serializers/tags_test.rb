@@ -138,7 +138,6 @@ module ActiveModel
           add_test_prefix("post_scope/comment_serializer/comment/#{@comment_db.id}")
         ]
 
-        ENV['foo'] = 't'
         assert_match_array(expected_tags_1, serializer_1._tags)
         assert_match_array(expected_tags_2, serializer_2._tags)
         assert_match_array(expected_tags_3, serializer_3._tags)
