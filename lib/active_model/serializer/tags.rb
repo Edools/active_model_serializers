@@ -39,6 +39,7 @@ module ActiveModel
       end
 
       def object_tag
+        return if object.blank?
         [self.class.name.underscore, object.class.name.underscore, object.id].join('/')
       end
 
@@ -54,10 +55,7 @@ module ActiveModel
 
       def build_object_tag(obj, tag_name, serializer_class)
         id = obj.try(:id) || obj
-
-        tag = [serializer_class.name.underscore, tag_name.underscore, id].join('/')
-        # binding.pry if tag == "active_model/serializer/tags_test/post_serializer1/blog/1"
-        tag
+        [serializer_class.name.underscore, tag_name.underscore, id].join('/')
       end
     end
   end
