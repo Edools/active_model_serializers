@@ -8,7 +8,7 @@ module ActiveModel
       end
 
       def build_tags(serializer_class = self.class, object = self.object, tag_name = nil, options = {}, parent_serializer = nil, associations_includes = nil)
-        serializer = serializer_class.new(object) if serializer_class
+        serializer = serializer_class.new(object, self.instance_options) if serializer_class
         return [build_tag(serializer, object, tag_name, options, parent_serializer)] if serializer.blank? || serializer.associations.blank?
 
         associations_tags = serializer.associations.map do |asc|
