@@ -11,6 +11,9 @@ module ActiveModel
       end
 
       def object
+        return @object if @object_fetched
+
+        @object_fetched = true
         @object ||= reflection.value(
           association_options.fetch(:parent_serializer),
           association_options.fetch(:include_slice)
