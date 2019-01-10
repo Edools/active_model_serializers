@@ -4,12 +4,12 @@ require_relative 'collection_serializer_test'
 module ActiveModel
   class Serializer
     class ArraySerializerTest < CollectionSerializerTest
-      extend ActiveSupport::Testing::Stream
+      extend Minitest::Assertions
       def self.run_one_method(*)
-        stderr = (capture(:stderr) do
+        _, stderr = capture_io do
           super
-        end)
-        if stderr !~ /Calling deprecated ArraySerializer/
+        end
+        if stderr !~ /NOTE: ActiveModel::Serializer::ArraySerializer.new is deprecated/
           fail Minitest::Assertion, stderr
         end
       end

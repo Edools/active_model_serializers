@@ -2,48 +2,61 @@ module ActiveModel
   class Serializer
     module Tags
       extend ActiveSupport::Concern
-        def _tags
-          if object.present?
-            associations_tags.push(object_tag).flatten.compact.uniq
+
+      def _tags
+        build_tags if object.present?
+      end
+
+      def build_tags(serializer_class = self.class, object = self.object, tag_name = nil, options = {}, parent_serializer = nil, associations_includes = nil)
+        serializer = serializer_class.new(object, self.instance_options) if serializer_class
+        return [build_tag(serializer, object, tag_name, options, parent_serializer)] if serializer.blank? || serializer.associations.blank?
+
+        associations_tags = serializer.associations.map do |asc|
+          parent_serializer = asc.association_options[:parent_serializer]
+          serializer_klass = asc.reflection.options[:serializer]
+          tag_name = asc.key.to_s.singularize.gsub(/(_id)$/, '')
+          options = asc.reflection.options
+          associations_to_include = [options[:include]].flatten
+
+          next if associations_includes && (associations_includes.blank? || !associations_includes.include?(asc.key))
+
+          if asc.object.respond_to?(:each) && !options[:tag_method]
+            asc.object.map { |obj| build_tags(serializer_klass, obj, tag_name, options, parent_serializer, associations_to_include) }
+          else
+            build_tags(serializer_klass, asc.object, tag_name, options, parent_serializer, associations_to_include)
           end
         end
 
-        private
-          def object_tag
-            [self.class.name.underscore, object.class.name.underscore, object.id].join('/')
-          end
+        associations_tags.flatten.compact << build_tag(serializer, object, tag_name, options, parent_serializer)
+      end
 
-          def associations_tags
-            associations.map do |association|
-              serializer = association.serializer
+      def build_tag(serializer, object, tag_name, options, parent_serializer)
+        if serializer
+          serializer.object_tag
+        else
+          build_tags_from(object, tag_name, options, parent_serializer)
+        end
+      end
 
-              if serializer.respond_to?(:each)
-                serializer.map { |s| s._tags }
-              elsif association.options[:virtual_value]
-                tags_for_virtual_value_from(association)
-              else
-                serializer._tags
-              end
-            end
-          end
+      def object_tag
+        return if object.blank?
+        [self.class.name.underscore, object.class.name.underscore, object.id].join('/')
+      end
 
-          def tags_for_virtual_value_from(association)
-            name = association.name.to_s
-            virtual_value = association.options[:virtual_value]
+      private
 
-            if association.options[:tag_method]
-              meth = association.options[:tag_method]
-              meth.arity > 0 ? instance_exec(virtual_value, &meth) : instance_exec(&meth)
-            elsif name.end_with?('_ids', 'id')
-              tag_name = name.gsub(/(_ids|_id)$/, '')
+      def build_tags_from(object, tag_name, options, parent_serializer)
+        tag_method = options[:tag_method]
+        return tag_method.arity > 0 ? instance_exec(object, &tag_method) : instance_exec(&tag_method) if tag_method
 
-              virtual_value.map do |id|
-                [self.class.name.underscore, tag_name, id].join('/')
-              end
-            else
-              raise "You need to provide the `tag_method` option for `#{name}` association"
-            end
-          end
+        serializer_class = options[:serializer] || parent_serializer.class || self.class
+        [object].flatten.map { |obj| build_object_tag(obj, tag_name, serializer_class) }
+      end
+
+      def build_object_tag(obj, tag_name, serializer_class)
+        id = obj.try(:id) || obj
+        [serializer_class.name.underscore, tag_name.underscore, id].join('/')
+      end
     end
   end
 end
