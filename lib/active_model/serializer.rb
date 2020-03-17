@@ -7,6 +7,7 @@ require 'active_model/serializer/errors_serializer'
 require 'active_model/serializer/concerns/caching'
 require 'active_model/serializer/fieldset'
 require 'active_model/serializer/lint'
+require 'active_model/serializer/tags'
 
 # ActiveModel::Serializer is an abstract class that is
 # reified when subclassed to decorate a resource.
@@ -31,6 +32,7 @@ module ActiveModel
     end
     include ActiveSupport::Configurable
     include Caching
+    include Tags
 
     # @param resource [ActiveRecord::Base, ActiveModelSerializers::Model]
     # @return [ActiveModel::Serializer]
@@ -404,7 +406,15 @@ module ActiveModel
       include_directive = options.fetch(:include_directive)
       include_slice = options[:include_slice]
       associations(include_directive, include_slice).each_with_object({}) do |association, relationships|
-        adapter_opts = adapter_options.merge(include_directive: include_directive[association.key], adapter_instance: adapter_instance)
+        association_include = association.reflection.options[:include]
+        association_include_directive =
+          if association_include
+            ActiveModel::Serializer.include_directive_from_options(include: association_include)
+          else
+            include_directive[association.key]
+          end
+
+        adapter_opts = adapter_options.merge(include_directive: association_include_directive, adapter_instance: adapter_instance)
         relationships[association.key] = association.serializable_hash(adapter_opts, adapter_instance)
       end
     end

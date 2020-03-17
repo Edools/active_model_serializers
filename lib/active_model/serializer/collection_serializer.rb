@@ -20,7 +20,8 @@ module ActiveModel
       # @api private
       def serializable_hash(adapter_options, options, adapter_instance)
         options[:include_directive] ||= ActiveModel::Serializer.include_directive_from_options(adapter_options)
-        options[:cached_attributes] ||= ActiveModel::Serializer.cache_read_multi(self, adapter_instance, options[:include_directive])
+        # A ideia é não usar cache nos atributos do objeto raiz
+        # options[:cached_attributes] ||= ActiveModel::Serializer.cache_read_multi(self, adapter_instance, options[:include_directive])
         serializers.map do |serializer|
           serializer.serializable_hash(adapter_options, options, adapter_instance)
         end
